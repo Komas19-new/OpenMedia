@@ -1,86 +1,83 @@
 #include "mediaplayer.h"
 
-MediaPlayer::MediaPlayer() {
-    currentMediaIndex = -1;
-}
+MediaPlayer::MediaPlayer() : currentMediaIndex(0), player(nullptr), playlistView(nullptr) {}
 
 void MediaPlayer::addMedia(std::string title, std::string filePath, std::string fileType) {
-    MediaFile media(title, filePath, fileType);
-    playlist.push_back(media);
+    MediaFile mediaFile(title, filePath, fileType);
+    playlist.push_back(mediaFile);
+    if (playlistView) {
+        playlistView->Append(wxString(title));
+    }
 }
 
 void MediaPlayer::play() {
-    if (playlist.empty()) {
-        std::cout << "No media selected." << std::endl;
-        // Display media icon
-        std::cout << "<i class='fas fa-file-media'></i>" << std::endl;
-        return;
+    if (player && player->GetState() != wxMEDIASTATE_PLAYING) {
+        player->Play();
     }
-    std::cout << "Playing: " << playlist[currentMediaIndex].getTitle() << std::endl;
-    // Code to play the media file
 }
 
 void MediaPlayer::pause() {
-    if (currentMediaIndex == -1) {
-        std::cout << "No media selected." << std::endl;
-        // Display media icon
-        std::cout << "<i class='fas fa-file-media'></i>" << std::endl;
-        return;
+    if (player && player->GetState() == wxMEDIASTATE_PLAYING) {
+        player->Pause();
     }
-    // Code to pause the media file
-    std::cout << "Paused: " << playlist[currentMediaIndex].getTitle() << std::endl;
 }
 
 void MediaPlayer::stop() {
-    if (currentMediaIndex == -1) {
-        std::cout << "No media selected." << std::endl;
-        // Display media icon
-        std::cout << "<i class='fas fa-file-media'></i>" << std::endl;
-        return;
+    if (player && player->GetState() != wxMEDIASTATE_STOPPED) {
+        player->Stop();
     }
-    // Code to stop the media file
-    std::cout << "Stopped: " << playlist[currentMediaIndex].getTitle() << std::endl;
 }
 
 void MediaPlayer::next() {
-    if (playlist.empty()) {
-        std::cout << "No media selected." << std::endl;
-        // Display media icon
-        std::cout << "<i class='fas fa-file-media'></i>" << std::endl;
-        return;
-    }
     if (currentMediaIndex < playlist.size() - 1) {
         currentMediaIndex++;
-    } else {
-        currentMediaIndex = 0;
+        if (player) {
+            player->Stop();
+            player->Load(playlist[currentMediaIndex].getFilePath());
+            player->Play();
+        }
     }
-    play();
 }
 
 void MediaPlayer::previous() {
-    if (playlist.empty()) {
-        std::cout << "No media selected." << std::endl;
-        // Display media icon
-        std::cout << "<i class='fas fa-file-media'></i>" << std::endl;
-        return;
-    }
     if (currentMediaIndex > 0) {
         currentMediaIndex--;
-    } else {
-        currentMediaIndex = playlist.size() - 1;
+        if (player) {
+            player->Stop();
+            player->Load(playlist[currentMediaIndex].getFilePath());
+            player->Play();
+        }
     }
-    play();
 }
 
-void MediaPlayer::showPlaylist() {
-    if (playlist.empty()) {
-        std::cout << "No media selected." << std::endl;
-        // Display media icon
-        std::cout << "<i class='fas fa-file-media'></i>" << std::endl;
-        return;
+void MediaPlayer::showPlaylist(wxFrame *parent) {
+    wxDialog dialog(parent, wxID_ANY, "Playlist", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+    playlistView = new wxListBox(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxLB_SINGLE | wxLB_HSCROLL | wxLB_NEEDED_SB);
+    for (const auto& media : playlist) {
+        playlistView->Append(wxString(media.getTitle()));
     }
-    std::cout << "Current Playlist:" << std::endl;
-    for (int i = 0; i < playlist.size(); i++) {
-        std::cout << i + 1 << ". " << playlist[i].getTitle() << std::endl;
-    }
+    sizer->Add(playlistView, 1, wxEXPAND | wxALL, 5);
+
+    wxBoxSizer *btnSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxButton *playBtn = new wxButton(&dialog, wxID_ANY, "Play");
+    playBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { this->play(); });
+    wxButton *pauseBtn = new wxButton(&dialog, wxID_ANY, "Pause");
+    pauseBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { this->pause(); });
+    wxButton *stopBtn = new wxButton(&dialog, wxID_ANY, "Stop");
+    stopBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { this->stop(); });
+    wxButton *nextBtn = new wxButton(&dialog, wxID_ANY, "Next");
+    nextBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { this->next(); });
+    wxButton *prevBtn = new wxButton(&dialog, wxID_ANY, "Previous");
+    prevBtn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { this->previous(); });
+    btnSizer->Add(playBtn, 0, wxALL, 5);
+    btnSizer->Add(pauseBtn, 0, wxALL, 5);
+    btnSizer->Add(stopBtn, 0, wxALL, 5);
+    btnSizer->Add(nextBtn, 0, wxALL, 5);
+    btnSizer->Add(prevBtn, 0, wxALL, 5);
+
+    sizer->Add(btnSizer, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
+
+    dialog.SetSizerAndFit(sizer);
+    dialog.ShowModal();
 }
