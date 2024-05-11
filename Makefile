@@ -1,26 +1,28 @@
 CC = g++
 CFLAGS = -Wall -std=c++11
 SRC_DIR = src
-BUILD_DIR = build/compiled
+BUILD_DIR = build
+OBJ_DIR = $(BUILD_DIR)/compiled
+OUTPUT_DIR = $(BUILD_DIR)/output
 SRC = $(wildcard $(SRC_DIR)/*.cpp)
-OBJ = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC))
-TARGET = $(BUILD_DIR)/OpenMedia
-CSS = $(SRC_DIR)/css/fontawesome-6.5.2.css
+OBJ = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC))
+TARGET = $(OUTPUT_DIR)/OpenMedia
+CSS = $(wildcard $(SRC_DIR)/css/fontawesome*.css)
 GIT_STATUS = $(shell git status --porcelain)
 VERSION = $(if $(strip $(GIT_STATUS)),Unknown,$(shell git rev-parse --short HEAD))
 
 $(TARGET): $(OBJ) $(CSS)
+	mkdir -p $(OUTPUT_DIR)/css
 	$(CC) -o $@ $(OBJ) $(CFLAGS)
-	cp $(CSS) $(BUILD_DIR)/css/fontawesome-6.5.2.css
-	echo "$(VERSION)" > $(BUILD_DIR)/VERSION
+	cp $(CSS) $(OUTPUT_DIR)/css/
+	echo "$(VERSION)" > $(OUTPUT_DIR)/VERSION
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
-	mkdir -p $(BUILD_DIR)/css
-	mkdir -p $(dir $@)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	mkdir -p $(OBJ_DIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 clean:
-	rm -rf $(BUILD_DIR)/*.o $(TARGET)
+	rm -rf $(BUILD_DIR)
 
 run:
 	./$(TARGET)
